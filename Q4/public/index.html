@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Shipping Fee Calculator</title>
+  <style>
+    .container {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .img-bg {
+      opacity: 0.1;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+
+    .item {
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    #error-message {
+      color: red;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    input {
+      width: 50px;
+    }
+
+    .dimension {
+      margin: 0px 10px;
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+    }
+
+    .shipping-fee {
+      display: none;
+      text-align: center;
+    }
+
+  </style>
+</head>
+
+<body>
+  <img class="img-bg" src="bg_img.jpg" draggable="false" >
+  <div class="container">
+    
+    <div>
+      <h2>Shipping Fee Calculator</h2>
+      <form id="form">
+        <div class="form-group">
+          <label for="temperature">Temperature Condition:</label>
+          <select name="temperature">
+            <option value="Ambient">Ambient</option>
+            <option value="Chill">Chill</option>
+          </select>
+        </div>
+
+        <div id="items-container">
+          <div id="error-message"></div>
+        </div>
+
+        <button type="button" class="btn" id="add-item-btn">Add Item</button>
+        <button type="submit" class="btn">Calculate Shipping Fee</button>
+        <div class="result" id="result"></div>
+      </form>
+      <h2 class="shipping-fee">
+      </h2>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('#add-item-btn').on('click', addItem);
+
+        function addItem() {
+          const itemsContainer = $('#items-container');
+          const itemCount = itemsContainer.find('.item').length + 1;
+          const newItem = $('<div>').addClass('item');
+          newItem.html(`
+          <div class="form-group">
+            <label>Dimension (cm):</label>
+            <div class="dimension">
+              <label for="item${itemCount}[length]">Length:</label>
+              <input type="number" name="item${itemCount}[length]" min="0" max="500" value="0" required>
+              <label for="item${itemCount}[width]">Width:</label>
+              <input type="number" name="item${itemCount}[width]" min="0" max="500" value="0" required>
+              <label for="item${itemCount}[height]">Height:</label>
+              <input type="number" name="item${itemCount}[height]" min="0" max="500" value="0" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="item${itemCount}[weight]">Weight (kg):</label>
+            <input type="number" class="weight" name="item${itemCount}[weight]" min="0" max="500" value="0">
+          </div>
+          <button type="button" class="delete-item-btn" data-item-count="${itemCount}">Delete</button>
+        `);
+          itemsContainer.append(newItem);
+          addDeleteButtonListener(newItem);
+        }
+
+        function addDeleteButtonListener(item) {
+          let timeout;
+          const deleteButton = item.find('.delete-item-btn');
+          const errorMsg = $('#error-message');
+
+          deleteButton.on('click', function () {
+            const itemsContainer = $('#items-container');
+            const itemCount = itemsContainer.find('.item').length;
+            if (itemCount > 1) {
+              item.remove();
+            } else {
+              clearTimeout(timeout);
+              errorMsg.css('display', 'block');
+              errorMsg.html('There must be at least 1 item.');
+              timeout = setTimeout(function () {
+                errorMsg.css('display', 'none');
+              }, 3000);
+            }
+          });
+        }
+
+        function serializeFormData(form) {
+          const serialized = {};
+          // select all input elements with name attribute
+          form.find(':input[name]').each(function () {
+            const name = $(this).attr('name');
+            const value = $(this).val();
+
+            let keys = name.split('[');
+            keys = keys.map(key => key.replace(']', ''));
+
+            let temp = serialized;
+            for (let i = 0; i < keys.length - 1; i++) {
+              // if current key does not exist
+              if (!temp[keys[i]]) temp[keys[i]] = {};
+              temp = temp[keys[i]];
+            }
+            temp[keys[keys.length - 1]] = value;
+          });
+          return serialized;
+        }
+
+        $('#form').on('submit', function (event) {
+          event.preventDefault();
+          const data = serializeFormData($(this));
+          console.log(data);
+
+          $.ajax({
+            url: '/calculate-shipping-fee',
+            method: 'POST',
+            data: data,
+            success: function (response) {
+              const shippingFee = response.shippingFee;
+              $('.shipping-fee').show();
+              $('.shipping-fee').text(`Your shipping fee is ${shippingFee}`);
+            },
+            error: function (error) {
+            }
+          });
+        });
+
+        addItem();
+      });
+    </script>
+</body>
+
+</html>

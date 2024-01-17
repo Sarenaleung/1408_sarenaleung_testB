@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crimerecord
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crimerecord
+  template:
+    metadata:
+      labels:
+        app: crimerecord
+        visualize: "true"
+    spec:
+      containers:
+      - name: crimerecord-pod
+        image: sarena/q5-img
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    visualize: "true"
+  name: crimerecord-service
+spec:
+  selector:
+    app: crimerecord
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
